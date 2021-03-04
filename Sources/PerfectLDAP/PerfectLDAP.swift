@@ -618,26 +618,10 @@ public class LDAP {
   ///   ResultSet. See ResultSet
   /// - throws:
   ///   Exception.message
-  public func search(base:String = "", filter:String = "(objectclass=*)", scope:Scope = .BASE, attributes: [String] = [], sortedBy: String = "") throws -> [String:[
+  public func search(base:String = "", filter:String = "(objectclass=*)", scope:Scope = .BASE, attributes: [String] = [], limit: Int32 = 5) throws -> [String:[
   String:Any]] {
 
     var serverControl = UnsafeMutablePointer<LDAPControl>(bitPattern: 0)
-
-    if !sortedBy.isEmpty {
-      var sortKeyList = UnsafeMutablePointer<UnsafeMutablePointer<LDAPSortKey>?>(bitPattern: 0)
-      let sortString = ber_strdup(sortedBy)
-      var r = ldap_create_sort_keylist(&sortKeyList, sortString)
-      defer { ber_memfree(sortString) }
-      guard r == 0 else {
-        throw Exception.message(LDAP.error(r))
-      }//end if
-
-      r = ldap_create_sort_control(self.ldap, sortKeyList, 0, &serverControl)
-      defer { ldap_free_sort_keylist(sortKeyList) }
-      guard r == 0 else {
-        throw Exception.message(LDAP.error(r))
-      }//end if
-    }//end if
 
     // prepare the return set
     var msg = OpaquePointer(bitPattern: 0)
@@ -645,7 +629,7 @@ public class LDAP {
     let r = withCArrayOfString(array: attributes) { pAttribute -> Int32 in
 
       // perform the search
-      let result = ldap_search_ext_s(self.ldap, base, scope.rawValue, filter, pAttribute, 0, &serverControl, nil, nil, 0, &msg)
+      let result = ldap_search_ext_s(self.ldap, base, scope.rawValue, filter, pAttribute, 0, &serverControl, nil, nil, limit, &msg)
 
       if serverControl != nil {
         ldap_control_free(serverControl)
